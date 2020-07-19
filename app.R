@@ -10,6 +10,8 @@ library(shiny)
 
 # Define UI for data upload app ----
 ui <- fluidPage(
+  
+    downloadLink("downloadData", "Download"),
     
     textInput("firstCase", "First filter...",NULL),
     
@@ -54,9 +56,10 @@ ui <- fluidPage(
             tags$hr(),
             # Input: Select number of rows to display ----
             radioButtons("disp", "Display",
-                         choices = c(Head = "head",
-                                     All = "all", Count = "count"),
-                         selected = "head")
+                         choices = c(#Head = "head",
+                                     #All = "all", 
+                                     Count = "count"),
+                         selected = "count")
             
         ),
         
@@ -120,8 +123,10 @@ server <- function(input, output) {
             return(head(issues))
         }
         else if (input$disp == "all"){
-            return(issues)
+            cooccur <- as.data.frame.table(issues$text, issues$media_url)
+            return(cooccur)
         } else {
+          
           split_media<- lapply(issues$media_urls, function (x) strsplit(as.character(x),';',fixed=TRUE))
           #tidy up. For now the URL is needed to map back
           split_file<- lapply(split_media, function (x) {
@@ -134,6 +139,15 @@ server <- function(input, output) {
           
           count = table(unlist(split_media))
           imagegrid = rbind(as.data.frame(count))
+          
+          output$downloadData <- downloadHandler(
+            filename = function() {
+              paste(p1,"_",d1,"_grid_", Sys.Date(), ".csv", sep="")
+            },
+            content = function(file) {
+              write.csv(as.data.frame(imagegrid), file)
+            }
+          )
           return(imagegrid)
         }
   
