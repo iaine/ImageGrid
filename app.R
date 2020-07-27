@@ -7,15 +7,17 @@
 #    http://shiny.rstudio.com/
 #
 library(shiny)
+library(DT)
 
 # Define UI for data upload app ----
 ui <- fluidPage(
   
-    downloadLink("downloadData", "Download"),
+    downloadLink("downloadData", "Download Data"),
+    actionButton("downloadImages", "Download Images"),
     
-    textInput("firstCase", "First filter...",NULL),
+    textInput("firstCase", "First issue filter",NULL),
     
-    textInput("secondCase", "Second filter...",NULL),
+    textInput("secondCase", "Second issue filter...",NULL),
     
     # App title ----
     titlePanel("Uploading Files"),
@@ -67,7 +69,8 @@ ui <- fluidPage(
         mainPanel(
             
             # Output: Data file ----
-            tableOutput("contents")
+          #tableOutput("contents")
+            DT::dataTableOutput("contents")
             
         )
         
@@ -77,7 +80,7 @@ ui <- fluidPage(
 # Define server logic to read selected file ----
 server <- function(input, output) {
     
-    output$contents <- renderTable({
+    output$contents <- DT::renderDataTable({
         
         # input$file1 will be NULL initially. After the user selects
         # and uploads a file, head of that data file by default,
@@ -102,6 +105,7 @@ server <- function(input, output) {
             filtered <- df1[grep(d1, df1$text, ignore.case = TRUE),]
 
         } else {
+          d1=''
             filtered <- df1
         }       
         
@@ -116,6 +120,7 @@ server <- function(input, output) {
             issues <- filtered[grep(p1, filtered$text, ignore.case = TRUE),]
         }
         else {
+          p1 = ''
             issues <- filtered
         }
         
@@ -126,32 +131,63 @@ server <- function(input, output) {
             cooccur <- as.data.frame.table(issues$text, issues$media_url)
             return(cooccur)
         } else {
-          
           split_media<- lapply(issues$media_urls, function (x) strsplit(as.character(x),';',fixed=TRUE))
           #tidy up. For now the URL is needed to map back
-          split_file<- lapply(split_media, function (x) {
+          split_file<- lapply(unlist(split_media), function (x) {
+            #slight hack to make sure that any empty lines are removed.
             if (x != 'character(0)') {
-              f = strsplit(as.character(x),'/',fixed=TRUE); 
-              g = tail(as.character(f[[1]]), n=1);
-              gsub('")', '', g)
+              gsub('")', '', x)
+              HTML(paste('<img src="',as.character(x),'" height="50"></img>', sep=''))
             }
           })
           
-          count = table(unlist(split_media))
+          count = table(unlist(split_file))
           imagegrid = rbind(as.data.frame(count))
+          
+          clean_column <- lapply(imagegrid$Var1, function(x) {
+            x1 <- gsub('<img src="', '', x[1])
+            gsub('" height="50"></img>', '', x1[[1]])
+          })
+          
+          downloadFiles <- function(fileList) {
+            imageDir = paste(getcwd(),'imagegrid',Sys.Date(), sep='/')
+            if (!dir.exists(imageDir)) {
+              dir.create(imageDir, showWarnings = FALSE)
+            }
+            
+            for (x in fileList) {
+              skip_to_next <- FALSE
+              
+              f = strsplit(as.character(x),'/',fixed=TRUE); 
+              y = paste(imageDir, tail(as.character(f[[1]]), n=1), sep='/');
+              if (!file.exists(y)) {
+                tryCatch(download.file(trimws(x, which="both"), destfile = y, mode = 'wb')
+                         , error = function(e) { skip_to_next <<- TRUE}) 
+              }
+              if(skip_to_next) { next } 
+            }
+          }
+          
+          imagegrid$Name = unlist(clean_column)
           
           output$downloadData <- downloadHandler(
             filename = function() {
               paste(p1,"_",d1,"_grid_", Sys.Date(), ".csv", sep="")
             },
             content = function(file) {
-              write.csv(as.data.frame(imagegrid), file)
-            }
+              write.csv(data.frame(Name=imagegrid$Name, Frequency=imagegrid$Freq ), file)
+            }, 
+
           )
+          
+          observeEvent(input$downloadImages, {
+            downloadFiles(imagegrid$Name)
+          })
+          
           return(imagegrid)
         }
   
-    })
+    }, escape = FALSE)
     
 }
 # Run the app ----

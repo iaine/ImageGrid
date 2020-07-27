@@ -1,0 +1,76 @@
+---
+title: "Image Grid"
+author: "Iain  Emsley"
+date: "17/07/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Image Grid
+
+This is an R Markdown version of the image grid. 
+
+```{r read}
+cooccur <- read.csv('tcat.csv', stringsAsFactors = FALSE)
+head(cooccur)
+```
+
+Filter the text using a list of terms from the location to identify tweets that contain the terms in the home location. Filtered contains the subset of location tweets that match the terms. 
+
+```{r filterTags}
+termsToFind <- c('at home', 'house', 'household', 'finger prick')
+
+tcat <- data.frame()
+
+filtered <- cooccur[grep( "at home|house|household|finger prick", cooccur$text, ignore.case = TRUE),]
+head(filtered)
+#tcat <- filtered$media_urls
+#head(tcat)
+```
+Filter the locations by an issue. Here the inequality issue is used to further filter the location by the issue.
+```{r runissue}
+imagegrid = data.frame()
+
+issues <- filtered[grep("wealth|gated|access|insurance|unequal|racism|racial breakdown", filtered$text, ignore.case = TRUE),]
+```
+
+```{r createImageGrid}  
+  split_media<- lapply(issues$media_urls, function (x) strsplit(as.character(x),';',fixed=TRUE))
+
+  split_file<- lapply(split_media, function (x) {
+    if (x != 'character(0)') {
+    f = strsplit(as.character(x),'/',fixed=TRUE); 
+    g = tail(as.character(f[[1]]), n=1);
+    gsub('")', '', g)
+    }
+  })
+  
+  for  (down in split_file) {
+    y  <- paste('data', down,sep = '/')
+    if (!file.exists(y) && y != 'character(0)') {
+      download.file(down, y, mode='wb')
+    }
+  }
+  
+  count = table(unlist(split_file))
+  
+  #images = as.data.frame(count)
+  imagegrid = rbind(as.data.frame(count))
+  #write.csv(image, term + ".csv")
+
+imagegrid$figure <- lapply(imagegrid$Var1, function(x) paste("![](data/", x, ")", sep=''))
+knitr::kable(imagegrid)
+```
+
+## Clean Data
+
+Split the columns where they contain a ';'. 
+
+Create the file name by getting the final part of the url from the dataframe.
+
+## Export data
+
+Convert the table into a data frame. 
