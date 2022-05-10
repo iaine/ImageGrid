@@ -174,12 +174,12 @@ server <- function(input, output) {
 
           proxyImageGrid = dataTableProxy("contents")
  
-          #https://stackoverflow.com/questions/56535488/how-to-download-editable-data-table-in-shiny
-          #observeEvent(input[['contents_cell_edit']], {
-          #  cell <- input[['contents_cell_edit']]
-          #  img$data[cell$row, cell$col] <- DT::coerceValue( cell$value, img$data[cell$row, cell$col])
+          #eventReactive stops
+          eventReactive(input[['contents_cell_edit']], {
+            cell <- input[['contents_cell_edit']]
+            img$data[cell$row, cell$col] <- DT::coerceValue( cell$value, img$data[cell$row, cell$col])
             
-          #}, ignoreNULL = FALSE) 
+          }, ignoreNULL = FALSE) 
           
           isolate(replaceData(proxyImageGrid, img$data, resetPaging = FALSE) )
           
