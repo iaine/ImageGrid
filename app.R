@@ -104,7 +104,7 @@ server <- function(input, output) {
         
         #load the different sources
         if (input$src == "tweet") {
-          df1 = data.frame(text=df$text, media_urls=df$media_expanded_url)
+          df1 = data.frame(text=df$text, media_urls=df$media_url)
         } else {
           df1 = data.frame(text=df$text, media_urls=df$media_urls)
         }
