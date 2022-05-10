@@ -11,22 +11,24 @@ library(DT)
 
 # Define UI for data upload app ----
 ui <- fluidPage(
-  
-    downloadLink("downloadData", "Download Data"),
-    actionButton("downloadImages", "Download Images"),
-    
-    textInput("firstCase", "First issue filter",NULL),
-    
-    textInput("secondCase", "Second issue filter...",NULL),
     
     # App title ----
-    titlePanel("Uploading Files"),
+    titlePanel("imageGridR"),
 
     # Sidebar layout with input and output definitions ----
     sidebarLayout(
         
         # Sidebar panel for inputs ----
         sidebarPanel(
+          
+          
+          textInput("firstCase", "First issue filter",NULL),
+          
+          textInput("secondCase", "Second issue filter...",NULL),  
+          
+          downloadLink("downloadData", "Download Data"),
+          
+          actionButton("downloadImages", "Download Images"),
             
             # Input: Select a file ----
             fileInput("file1", "Choose CSV File",
@@ -61,8 +63,8 @@ ui <- fluidPage(
                          choices = c(#Head = "head",
                                      #All = "all", 
                                      Count = "count"),
-                         selected = "count")
-            
+                         selected = "count"),
+
         ),
         
         # Main panel for displaying outputs ----
@@ -79,9 +81,9 @@ ui <- fluidPage(
             
 # Define server logic to read selected file ----
 server <- function(input, output) {
-    
-    output$contents <- DT::renderDataTable({
-        
+ 
+
+  output$contents <- DT::renderDataTable({          
         # input$file1 will be NULL initially. After the user selects
         # and uploads a file, head of that data file by default,
         # or all rows if selected, will be shown.
@@ -140,8 +142,10 @@ server <- function(input, output) {
               HTML(paste('<img src="',as.character(x),'" height="50"></img>', sep=''))
             }
           })
+        }
           
           count = table(unlist(split_file))
+
           imagegrid = rbind(as.data.frame(count))
           
           clean_column <- lapply(imagegrid$Var1, function(x) {
@@ -149,46 +153,63 @@ server <- function(input, output) {
             gsub('" height="50"></img>', '', x1[[1]])
           })
           
-          downloadFiles <- function(fileList) {
-            imageDir = paste(getcwd(),'imagegrid',Sys.Date(), sep='/')
-            if (!dir.exists(imageDir)) {
-              dir.create(imageDir, showWarnings = FALSE)
-            }
-            
-            for (x in fileList) {
-              skip_to_next <- FALSE
-              
-              f = strsplit(as.character(x),'/',fixed=TRUE); 
-              y = paste(imageDir, tail(as.character(f[[1]]), n=1), sep='/');
-              if (!file.exists(y)) {
-                tryCatch(download.file(trimws(x, which="both"), destfile = y, mode = 'wb')
-                         , error = function(e) { skip_to_next <<- TRUE}) 
-              }
-              if(skip_to_next) { next } 
-            }
-          }
-          
+          #@todo: Add the edited column back to data frame
           imagegrid$Name = unlist(clean_column)
+          imagegrid$Notes <- ''
+                   
+          img <- reactiveValues(data = imagegrid)
+
+          proxyImageGrid = dataTableProxy("contents")
+ 
+          #https://stackoverflow.com/questions/56535488/how-to-download-editable-data-table-in-shiny
+          #observeEvent(input$contents_cell_edit, {
+          #  cell <- input$contents_cell_edit
+          #  img$data[cell$row, cell$col] <- DT::coerceValue( cell$value, img$data[cell$row, cell$col])
+            
+          #}, ignoreNULL = FALSE) 
+          
+          isolate(replaceData(proxyImageGrid, img$data, resetPaging = FALSE) )
           
           output$downloadData <- downloadHandler(
             filename = function() {
               paste(p1,"_",d1,"_grid_", Sys.Date(), ".csv", sep="")
             },
             content = function(file) {
-              write.csv(data.frame(Name=imagegrid$Name, Frequency=imagegrid$Freq ), file)
+              write.csv(data.frame(Name=imagegrid$Name, Frequency=imagegrid$Freq, Notes=imagegrid$Notes ), file)
             }, 
 
           )
           
           observeEvent(input$downloadImages, {
+            #@todo: Get the filtered image grid
             downloadFiles(imagegrid$Name)
           })
           
-          return(imagegrid)
+          print('Loading...')
+          return(img$data)
+          
+        #}
+
+    }, escape = FALSE,editable=TRUE)
+
+    downloadFiles <- function(fileList) {
+      imageDir = paste(getcwd(),'imagegrid',Sys.Date(), sep='/')
+      if (!dir.exists(imageDir)) {
+        dir.create(imageDir, showWarnings = FALSE)
+      }
+      
+      for (x in fileList) {
+        skip_to_next <- FALSE
+        
+        f = strsplit(as.character(x),'/',fixed=TRUE); 
+        y = paste(imageDir, tail(as.character(f[[1]]), n=1), sep='/');
+        if (!file.exists(y)) {
+          tryCatch(download.file(trimws(x, which="both"), destfile = y, mode = 'wb')
+                   , error = function(e) { skip_to_next <<- TRUE}) 
         }
-  
-    }, escape = FALSE)
-    
+        if(skip_to_next) { next } 
+      }
+    }    
 }
 # Run the app ----
 shinyApp(ui, server)
