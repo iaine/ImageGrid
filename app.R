@@ -1,7 +1,9 @@
 #
-# This is a Shiny web application to test with the 
+# This is a Shiny web application to test looking for the 
+# images related to a particular set of data. 
 #
-
+#  Its currently based on TCAT. Maybe update to accept other data
+#
 #
 library(shiny)
 library(DT)
