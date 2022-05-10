@@ -40,8 +40,16 @@ ui <- fluidPage(
             tags$hr(),
             # Input: Checkbox if file has header ----
             checkboxInput("header", "Header", TRUE),
-            
-            # Input: Select separator ----
+ 
+          
+                     
+          # Input: Select Data Source
+          radioButtons("src", "Source",
+                       choices = c(TCAT = "tcat",
+                                   Tweet = "tweet"),
+                       selected = "tweet"),
+          
+          # Input: Select separator ----
             radioButtons("sep", "Separator",
                          choices = c(Comma = ",",
                                      Semicolon = ";",
@@ -94,7 +102,13 @@ server <- function(input, output) {
                        sep = input$sep,
                        quote = input$quote)
         
-        df1 = data.frame(text=df$text, media_urls=df$media_urls)
+        #load the different sources
+        if (input$src == "tweet") {
+          df1 = data.frame(text=df$text, media_urls=df$media_expanded_url)
+        } else {
+          df1 = data.frame(text=df$text, media_urls=df$media_urls)
+        }
+        
 
         d <- input$firstCase
         if (d != '') {
