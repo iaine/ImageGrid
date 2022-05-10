@@ -1,10 +1,7 @@
 #
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
+# This is a Shiny web application to test with the 
 #
-# Find out more about building applications with Shiny here:
-#
-#    http://shiny.rstudio.com/
+
 #
 library(shiny)
 library(DT)
@@ -162,8 +159,8 @@ server <- function(input, output) {
           proxyImageGrid = dataTableProxy("contents")
  
           #https://stackoverflow.com/questions/56535488/how-to-download-editable-data-table-in-shiny
-          #observeEvent(input$contents_cell_edit, {
-          #  cell <- input$contents_cell_edit
+          #observeEvent(input[['contents_cell_edit']], {
+          #  cell <- input[['contents_cell_edit']]
           #  img$data[cell$row, cell$col] <- DT::coerceValue( cell$value, img$data[cell$row, cell$col])
             
           #}, ignoreNULL = FALSE) 
